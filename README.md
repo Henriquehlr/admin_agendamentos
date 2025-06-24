@@ -6,7 +6,7 @@ Este é o painel administrativo de um sistema de agendamento de salas. Desenvolv
 
 - [Next.js 14+ (App Router)](https://nextjs.org/)
 - [React 18+](https://reactjs.org/)
-- [Tailwind CSS](https://tailwindcss.com/) (opcional)
+- [Tailwind CSS](https://tailwindcss.com/) 
 - [Axios](https://axios-http.com/) para chamadas HTTP
 - [JWT](https://jwt.io/) para autenticação baseada em token
 - Backend em Node.js rodando na porta `3000` (consumido via API)
