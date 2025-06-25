@@ -28,7 +28,7 @@ export default function AdminLoginPage() {
 
       const token = data.token;
       localStorage.setItem('token', token);
-      router.push('/admin/dashboard');
+      router.push('/dashboard');
     } catch (err: any) {
       setError(err.message);
     }
