@@ -30,7 +30,7 @@ export default function TableComponent({
   dados,
   onEditar,
   onAtualizarPermissao,
-  onToggleStatus
+  onToggleStatus,
 }: TableComponentProps) {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -242,10 +242,11 @@ export default function TableComponent({
                           !temAgendamento
                         )
                       }
-                      className={`px-3 py-1 rounded-full text-sm ${temAgendamento
+                      className={`px-3 py-1 rounded-full text-sm ${
+                        temAgendamento
                           ? "bg-black text-white"
                           : "bg-transparent text-black border border-black"
-                        }`}
+                      }`}
                     >
                       Agendamentos
                     </button>
@@ -253,10 +254,11 @@ export default function TableComponent({
                       onClick={() =>
                         onAtualizarPermissao?.(item.id, "Logs", !temLogs)
                       }
-                      className={`px-3 py-1 rounded-full text-sm ${temLogs
+                      className={`px-3 py-1 rounded-full text-sm ${
+                        temLogs
                           ? "bg-black text-white"
                           : "bg-transparent text-black border border-black"
-                        }`}
+                      }`}
                     >
                       Logs
                     </button>
@@ -267,16 +269,16 @@ export default function TableComponent({
                       onChange={() => onToggleStatus?.(item.id)}
                       sx={{
                         "& .MuiSwitch-switchBase": {
-                          color: "#000", 
+                          color: "#000",
                         },
                         "& .MuiSwitch-switchBase.Mui-checked": {
-                          color: "#000", 
+                          color: "#000",
                         },
                         "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                          backgroundColor: "#000", 
+                          backgroundColor: "#000",
                         },
                         "& .MuiSwitch-track": {
-                          backgroundColor: "#bbb", 
+                          backgroundColor: "#bbb",
                         },
                       }}
                     />
@@ -288,10 +290,25 @@ export default function TableComponent({
             if (tipo === "Logs") {
               return (
                 <TableRow key={item.id}>
-                  <TableCell>{item.cliente}</TableCell>
-                  <TableCell>{item.atividade}</TableCell>
-                  <TableCell>{item.modulo}</TableCell>
-                  <TableCell>{item.dataHora}</TableCell>
+                  <TableCell>
+                    <div className="font-medium text-black">{item.cliente}</div>
+                    <div className="text-sm text-gray-500">{item.tipo || "cliente"}</div>
+                  </TableCell>
+                  <TableCell>
+                    <span className="bg-gray-200 text-gray-800 rounded-full px-3 py-1 inline-block text-sm text-center min-w-[100px]">
+                      {item.atividade}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className="bg-gray-200 text-gray-800 rounded-full px-3 py-1 inline-block text-sm text-center min-w-[100px]">
+                      {item.modulo}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className="bg-gray-200 text-gray-800 rounded-full px-3 py-1 inline-block text-sm text-center min-w-[130px]">
+                      {item.dataHora}
+                    </span>
+                  </TableCell>
                 </TableRow>
               );
             }

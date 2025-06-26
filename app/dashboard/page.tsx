@@ -17,23 +17,7 @@ export default function Dashboard() {
 
   const [agendamentos, setAgendamentos] = useState<any[]>([]);
   const [clientesApi, setClientesApi] = useState<any[]>([]);
-
-  const logs = [
-    {
-      id: 1,
-      cliente: "João",
-      atividade: "Criação de agendamento",
-      modulo: "Agendamentos",
-      dataHora: "2025-06-25 10:00",
-    },
-    {
-      id: 2,
-      cliente: "Maria",
-      atividade: "Login",
-      modulo: "Autenticação",
-      dataHora: "2025-06-24 08:30",
-    },
-  ];
+  const [logs, setLogs] = useState<any[]>([]); // 🔁 log do backend
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -71,6 +55,39 @@ export default function Dashboard() {
         .catch((error) => {
           console.error("Erro ao buscar clientes:", error);
           setClientesApi([]);
+        });
+    }
+
+    if (selectedMenu === "Logs") {
+      fetch("http://localhost:3000/logs", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          const logsFormatados = data.map((log: any) => {
+            const datetimeObj = new Date(log.datetime);
+            const dataHora = `${datetimeObj.toLocaleDateString("pt-BR")} às ${datetimeObj.toLocaleTimeString("pt-BR", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}`;
+
+            return {
+              id: log.id,
+              cliente: log.name,
+              tipo: log.role || "cliente",
+              atividade: log.activityType,
+              modulo: log.module,
+              dataHora,
+            };
+          });
+
+          setLogs(logsFormatados);
+        })
+        .catch((error) => {
+          console.error("Erro ao buscar logs:", error);
+          setLogs([]);
         });
     }
   }, [selectedMenu, router]);
@@ -137,8 +154,6 @@ export default function Dashboard() {
         const room = item.room?.toLowerCase() || "";
         const dataMatch = filtroData ? item.date === filtroData : true;
         return (userName.includes(term) || room.includes(term)) && dataMatch;
-      } else if ("name" in item) {
-        return item.name.toLowerCase().includes(term);
       } else if ("cliente" in item) {
         return item.cliente.toLowerCase().includes(term);
       }
@@ -181,8 +196,7 @@ export default function Dashboard() {
               <button
                 key={menu}
                 onClick={() => setSelectedMenu(menu)}
-                className={`w-full text-left flex items-center space-x-4 px-4 py-2 rounded ${isSelected ? "bg-black text-white" : ""
-                  }`}
+                className={`w-full text-left flex items-center space-x-4 px-4 py-2 rounded ${isSelected ? "bg-black text-white" : ""}`}
               >
                 <Icon size={20} color={isSelected ? "white" : "black"} />
                 <span className={isSelected ? "text-white" : "text-black"}>{menu}</span>
@@ -239,7 +253,7 @@ export default function Dashboard() {
 
         <div className="overflow-x-auto border rounded px-2 sm:px-6">
           <TableComponent
-            tipo={selectedMenu}
+            tipo={selectedMenu as "Agendamentos" | "Clientes" | "Logs"}
             dados={getFilteredData()}
             onEditar={handleEditar}
             onAtualizarPermissao={handleAtualizarPermissao}
