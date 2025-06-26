@@ -25,5 +25,5 @@ Este é o painel administrativo de um sistema de agendamento de salas. Desenvolv
 1. **Clone este repositório:**
 
 ```bash
-git clone https://github.com/seu-usuario/admin-panel.git
+git clone https://github.com/Henriquehlr/admin_agendamentos
 cd admin-panel
