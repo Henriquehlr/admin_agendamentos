@@ -12,16 +12,15 @@ export default function AdminLoginPage() {
   const [error, setError] = useState('');
   const router = useRouter();
 
-  // Função responsável por autenticar o admin
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault(); // Evita recarregar a página
-    setError(''); // Limpa mensagens de erro anteriores
+    e.preventDefault();
+    setError(''); 
 
     try {
       const res = await fetch('http://localhost:3000/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }), // Envia credenciais
+        body: JSON.stringify({ email, password }), 
       });
 
       const data = await res.json();
@@ -31,12 +30,10 @@ export default function AdminLoginPage() {
       }
 
       const token = data.token;
-      // Armazena token no localStorage
       localStorage.setItem('token', token);
-      // Redireciona para o dashboard após login
+
       router.push('/dashboard');
     } catch (err: any) {
-      // Exibe mensagem de erro na tela
       setError(err.message);
     }
   };
