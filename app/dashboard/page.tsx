@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { CalendarDays, Users, FileText, Search } from "lucide-react";
+import { CalendarDays, Users, FileText, Search, ChevronDown } from "lucide-react";
 import TableComponent from "@/components/table";
 import AjustesModal from "@/components/modalScheduling";
 
@@ -14,15 +14,30 @@ export default function Dashboard() {
   const [filtroData, setFiltroData] = useState("");
   const [openModal, setOpenModal] = useState(false);
   const [mensagemSucesso, setMensagemSucesso] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
 
   const [agendamentos, setAgendamentos] = useState<any[]>([]);
   const [clientesApi, setClientesApi] = useState<any[]>([]);
-  const [logs, setLogs] = useState<any[]>([]); // 🔁 log do backend
+  const [logs, setLogs] = useState<any[]>([]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return router.push("/login");
-    setUser({ role: "admin" });
+
+    fetch("http://localhost:3000/users/profile", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    })
+      .then((res) => res.json())
+      .then((userData) => {
+        setUser(userData); 
+      })
+      .catch((err) => {
+        console.error("Erro ao buscar perfil", err);
+        router.push("/login");
+      });
 
     if (selectedMenu === "Agendamentos") {
       fetch("http://localhost:3000/bookings", {
@@ -145,8 +160,8 @@ export default function Dashboard() {
       selectedMenu === "Agendamentos"
         ? agendamentos
         : selectedMenu === "Clientes"
-          ? clientesApi
-          : logs;
+        ? clientesApi
+        : logs;
 
     return baseData.filter((item) => {
       if (selectedMenu === "Agendamentos" || selectedMenu === "Clientes") {
@@ -189,8 +204,8 @@ export default function Dashboard() {
               menu === "Agendamentos"
                 ? CalendarDays
                 : menu === "Clientes"
-                  ? Users
-                  : FileText;
+                ? Users
+                : FileText;
             const isSelected = selectedMenu === menu;
             return (
               <button
@@ -204,6 +219,33 @@ export default function Dashboard() {
             );
           })}
         </nav>
+
+        <div className="mt-auto pt-6 border-t border-gray-300">
+          <button
+            onClick={() => setShowDropdown(!showDropdown)}
+            className="w-full flex items-center justify-between px-4 py-2 rounded text-black hover:bg-gray-100"
+          >
+            <div>
+              <div className="font-semibold">{user.name}</div>
+              <div className="text-xs text-gray-500">{user.role}</div>
+            </div>
+            <ChevronDown size={16} />
+          </button>
+
+          {showDropdown && (
+            <div className="bg-white shadow rounded mt-2 mx-4 border border-gray-200">
+              <button
+                onClick={() => {
+                  localStorage.removeItem("token");
+                  router.push("/login");
+                }}
+                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+              >
+                Sair
+              </button>
+            </div>
+          )}
+        </div>
       </aside>
 
       <main className="flex-1 p-4 sm:p-6 overflow-auto w-full">
