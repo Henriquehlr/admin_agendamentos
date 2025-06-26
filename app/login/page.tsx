@@ -2,22 +2,26 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
 
+  // Função responsável por autenticar o admin
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+    e.preventDefault(); // Evita recarregar a página
+    setError(''); // Limpa mensagens de erro anteriores
 
     try {
       const res = await fetch('http://localhost:3000/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password }), // Envia credenciais
       });
 
       const data = await res.json();
@@ -27,36 +31,73 @@ export default function AdminLoginPage() {
       }
 
       const token = data.token;
+      // Armazena token no localStorage
       localStorage.setItem('token', token);
+      // Redireciona para o dashboard após login
       router.push('/dashboard');
     } catch (err: any) {
+      // Exibe mensagem de erro na tela
       setError(err.message);
     }
   };
 
   return (
-    <div className="p-4 max-w-md mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Login dAdmin</h1>
-      <form onSubmit={handleLogin} className="space-y-4">
-        <input
-          type="email"
-          placeholder="Email"
-          className="border p-2 w-full"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <input
-          type="password"
-          placeholder="Senha"
-          className="border p-2 w-full"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        {error && <p className="text-red-500">{error}</p>}
-        <button className="bg-blue-600 text-white py-2 px-4 rounded" type="submit">
-          Entrar
-        </button>
-      </form>
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 px-4">
+      <div className="flex flex-col items-center space-y-4 w-full">
+        <Image src="/logo.png" alt="Logo" width={100} height={100} />
+
+        <h1 className="text-xl font-semibold text-black">Login Admin</h1>
+
+        <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md">
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium mb-1 text-black">
+                E-mail <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                required
+                placeholder="Digite seu e-mail"
+                className="border border-gray-300 p-2 w-full rounded"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1 text-black">
+                Senha de acesso <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  placeholder="Digite sua senha"
+                  className="border border-gray-300 p-2 w-full rounded pr-10"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+
+                <div
+                  className="absolute top-1/2 right-3 transform -translate-y-1/2 cursor-pointer"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </div>
+              </div>
+            </div>
+
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+
+            <button
+              type="submit"
+              className="w-full bg-black text-white py-2 rounded hover:opacity-90 transition"
+            >
+              Acessar conta
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }
