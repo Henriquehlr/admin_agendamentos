@@ -4,12 +4,16 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CalendarDays, Users, FileText, Search } from "lucide-react";
 import TableComponent from "@/components/table";
+import AjustesModal from "@/components/modalScheduling";
 
 export default function Dashboard() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [selectedMenu, setSelectedMenu] = useState("Agendamentos");
   const [searchTerm, setSearchTerm] = useState("");
+  const [filtroData, setFiltroData] = useState("");
+  const [openModal, setOpenModal] = useState(false);
+  const [mensagemSucesso, setMensagemSucesso] = useState("");
 
   const [agendamentos, setAgendamentos] = useState<any[]>([]);
   const [clientesApi, setClientesApi] = useState<any[]>([]);
@@ -71,15 +75,55 @@ export default function Dashboard() {
     }
   }, [selectedMenu, router]);
 
-  if (!user) return <p className="p-4">Carregando...</p>;
-
   const handleEditar = (id: number) => {
     console.log(`Editar item com id: ${id}`);
   };
 
+  const handleAtualizarPermissao = async (userId: number, permissao: string, adicionar: boolean) => {
+    const token = localStorage.getItem("token");
+    const usuario = clientesApi.find((u) => u.id === userId);
+    if (!usuario) return;
+
+    const novasPermissoes = adicionar
+      ? [...(usuario.permissions || []), permissao]
+      : (usuario.permissions || []).filter((p: string) => p !== permissao);
+
+    try {
+      const res = await fetch(`http://localhost:3000/users/${userId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ permissions: novasPermissoes }),
+      });
+
+      if (res.ok) {
+        setMensagemSucesso("Permissões atualizadas com sucesso!");
+
+        setClientesApi((prev) =>
+          prev.map((cli) =>
+            cli.id === userId ? { ...cli, permissions: novasPermissoes } : cli
+          )
+        );
+
+        setTimeout(() => setMensagemSucesso(""), 3000);
+      }
+    } catch (err) {
+      console.error("Erro ao atualizar permissão", err);
+    }
+  };
+
+  const handleToggleStatus = (userId: number) => {
+    setClientesApi((prev) =>
+      prev.map((cli) =>
+        cli.id === userId ? { ...cli, status: !cli.status } : cli
+      )
+    );
+  };
+
   const getFilteredData = () => {
     const term = searchTerm.toLowerCase();
-
     const baseData =
       selectedMenu === "Agendamentos"
         ? agendamentos
@@ -88,10 +132,11 @@ export default function Dashboard() {
           : logs;
 
     return baseData.filter((item) => {
-      if (selectedMenu === "Agendamentos") {
-        const userName = item.user?.name?.toLowerCase() || "";
+      if (selectedMenu === "Agendamentos" || selectedMenu === "Clientes") {
+        const userName = item.user?.name?.toLowerCase() || item.name?.toLowerCase() || "";
         const room = item.room?.toLowerCase() || "";
-        return userName.includes(term) || room.includes(term);
+        const dataMatch = filtroData ? item.date === filtroData : true;
+        return (userName.includes(term) || room.includes(term)) && dataMatch;
       } else if ("name" in item) {
         return item.name.toLowerCase().includes(term);
       } else if ("cliente" in item) {
@@ -101,19 +146,29 @@ export default function Dashboard() {
     });
   };
 
-  return (
-    <div className="flex h-screen">
-      {/* Menu Lateral */}
-      <aside
-        className="w-64 text-white flex flex-col p-4"
-        style={{ backgroundColor: "#F6F4F1" }}
-      >
-        <div className="text-2xl font-bold mb-8">
-          <Image src="/logo.png" width={80} height={80} alt="Logo do painel" />
-          <hr className="border-t border-gray-300 mt-3" />
-        </div>
+  const getSubtitulo = () => {
+    switch (selectedMenu) {
+      case "Agendamentos":
+        return "Acompanhe todos os agendamentos de clientes de forma simples";
+      case "Clientes":
+        return "Overview de todos os clientes";
+      case "Logs":
+        return "Acompanhe todas as logs de clientes";
+      default:
+        return "";
+    }
+  };
 
+  if (!user) return <p className="p-4">Carregando...</p>;
+
+  return (
+    <div className="flex flex-wrap min-h-screen">
+      <aside className="w-full md:w-64 text-white flex flex-col p-4" style={{ backgroundColor: "#F6F4F1" }}>
+        <div className="text-2xl font-bold mb-8 flex items-center justify-between">
+          <Image src="/logo.png" width={60} height={60} alt="Logo do painel" />
+        </div>
         <nav className="space-y-4">
+          <hr className="border-t border-gray-300 w-full mt-1" />
           {["Agendamentos", "Clientes", "Logs"].map((menu) => {
             const Icon =
               menu === "Agendamentos"
@@ -126,34 +181,33 @@ export default function Dashboard() {
               <button
                 key={menu}
                 onClick={() => setSelectedMenu(menu)}
-                className={`w-full text-left flex items-center space-x-6 px-6 py-2 rounded ${isSelected ? "bg-black text-white" : ""
+                className={`w-full text-left flex items-center space-x-4 px-4 py-2 rounded ${isSelected ? "bg-black text-white" : ""
                   }`}
               >
                 <Icon size={20} color={isSelected ? "white" : "black"} />
-                <span className={isSelected ? "text-white" : "text-black"}>
-                  {menu}
-                </span>
+                <span className={isSelected ? "text-white" : "text-black"}>{menu}</span>
               </button>
             );
           })}
         </nav>
       </aside>
 
-      {/* Conteúdo Principal */}
-      <main className="flex-1 p-6">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold">{selectedMenu}</h1>
-          <p className="text-gray-600">
-            Acompanhe todos os {selectedMenu.toLowerCase()} de clientes de forma
-            simples
-          </p>
+      <main className="flex-1 p-4 sm:p-6 overflow-auto w-full">
+        <header className="mb-4 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold">{selectedMenu}</h1>
+          <p className="text-gray-600 text-sm sm:text-base">{getSubtitulo()}</p>
         </header>
+
+        {mensagemSucesso && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded mb-4">
+            {mensagemSucesso}
+          </div>
+        )}
 
         <hr className="border-t border-gray-300 my-4" />
 
-        {/* Filtros */}
-        <div className="flex items-center justify-between mb-4 px-6">
-          <div className="flex items-center space-x-4">
+        <div className="flex flex-wrap gap-4 justify-between mb-4 px-0 sm:px-6">
+          <div className="flex flex-wrap gap-2">
             <div className="relative">
               <Search className="absolute left-2 top-2.5 text-gray-400" size={16} />
               <input
@@ -161,30 +215,40 @@ export default function Dashboard() {
                 placeholder="Filtre por nome"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 pr-4 py-2 border border-gray-300 rounded w-64"
+                className="pl-8 pr-4 py-2 border border-gray-300 rounded w-48 sm:w-64"
               />
             </div>
 
             <input
               type="date"
-              className="border border-gray-300 py-2 px-3 rounded w-48"
+              value={filtroData}
+              onChange={(e) => setFiltroData(e.target.value)}
+              className="border border-gray-300 py-2 px-3 rounded w-40 sm:w-48"
             />
           </div>
 
-          <button className="bg-black text-white border border-black px-6 py-2 rounded whitespace-nowrap">
-            Ajustes de agendamentos
-          </button>
+          {selectedMenu === "Agendamentos" && (
+            <button
+              onClick={() => setOpenModal(true)}
+              className="bg-black text-white border border-black px-4 sm:px-6 py-2 rounded"
+            >
+              Ajustes de agendamentos
+            </button>
+          )}
         </div>
 
-        {/* Tabela */}
-        <div className="overflow-x-auto border rounded mx-6">
+        <div className="overflow-x-auto border rounded px-2 sm:px-6">
           <TableComponent
             tipo={selectedMenu}
             dados={getFilteredData()}
             onEditar={handleEditar}
+            onAtualizarPermissao={handleAtualizarPermissao}
+            onToggleStatus={handleToggleStatus}
           />
         </div>
       </main>
+
+      <AjustesModal isOpen={openModal} onClose={() => setOpenModal(false)} />
     </div>
   );
 }

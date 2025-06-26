@@ -11,16 +11,48 @@ import {
   Switch,
   TablePagination,
 } from "@mui/material";
+import { Check, X } from "lucide-react";
 
 type TableComponentProps = {
   tipo: "Agendamentos" | "Clientes" | "Logs";
   dados: any[];
   onEditar: (id: number) => void;
+  onAtualizarPermissao?: (
+    userId: number,
+    permissao: string,
+    adicionar: boolean
+  ) => void;
+  onToggleStatus?: (userId: number) => void;
 };
 
-export default function TableComponent({ tipo, dados, onEditar }: TableComponentProps) {
+export default function TableComponent({
+  tipo,
+  dados,
+  onEditar,
+  onAtualizarPermissao,
+  onToggleStatus
+}: TableComponentProps) {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
+
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  const formatAgendamentoDataHora = (date: string, time: string) => {
+    const d = new Date(`${date}T${time}`);
+    return `${d.toLocaleDateString("pt-BR")} às ${d.toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    })}`;
+  };
 
   const renderStatusRowColor = (status: string) => {
     switch (status) {
@@ -48,21 +80,40 @@ export default function TableComponent({ tipo, dados, onEditar }: TableComponent
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const d = new Date(dateString);
-    return d.toLocaleDateString("pt-BR");
+  const handleAprovar = async (id: number) => {
+    const token = localStorage.getItem("token");
+    try {
+      await fetch(`http://localhost:3000/bookings/${id}/approve`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      window.location.reload();
+    } catch (err) {
+      console.error("Erro ao aprovar agendamento:", err);
+    }
   };
 
-  const handleChangePage = (event: unknown, newPage: number) => {
-    setPage(newPage);
+  const handleCancelar = async (id: number) => {
+    const token = localStorage.getItem("token");
+    try {
+      await fetch(`http://localhost:3000/bookings/${id}/cancel`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      window.location.reload();
+    } catch (err) {
+      console.error("Erro ao cancelar agendamento:", err);
+    }
   };
 
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
-
-  const paginatedData = dados.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  const paginatedData = dados.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
 
   return (
     <TableContainer component={Paper}>
@@ -101,11 +152,17 @@ export default function TableComponent({ tipo, dados, onEditar }: TableComponent
           {paginatedData.map((item) => {
             if (tipo === "Agendamentos") {
               const status = item.status || "Agendado";
-              const nomeUsuario = item.user?.name || "-";
+              const nome = item.user?.name || "-";
+              const role = item.user?.role || "";
               return (
                 <TableRow key={item.id} className={renderStatusRowColor(status)}>
-                  <TableCell>{formatDate(item.date)}</TableCell>
-                  <TableCell>{nomeUsuario}</TableCell>
+                  <TableCell>
+                    {formatAgendamentoDataHora(item.date, item.startTime)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium text-black">{nome}</div>
+                    <div className="text-sm text-gray-500">{role}</div>
+                  </TableCell>
                   <TableCell>
                     <span className="bg-black text-white rounded-full px-3 py-1 inline-block text-center min-w-[40px]">
                       {item.room}
@@ -114,13 +171,37 @@ export default function TableComponent({ tipo, dados, onEditar }: TableComponent
                   <TableCell>
                     <span className={renderStatusStyle(status)}>{status}</span>
                   </TableCell>
-                  <TableCell className="space-x-2">
-                    <button
-                      onClick={() => onEditar(item.id)}
-                      className="bg-black text-white rounded-full px-3 py-1"
-                    >
-                      ✏️
-                    </button>
+                  <TableCell className="space-x-2 flex">
+                    {status === "Em análise" && (
+                      <>
+                        <button
+                          onClick={() => handleAprovar(item.id)}
+                          className="bg-black text-white rounded-full p-2"
+                          title="Aprovar"
+                        >
+                          <Check size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleCancelar(item.id)}
+                          className="bg-black text-white rounded-full p-2"
+                          title="Cancelar"
+                        >
+                          <X size={16} />
+                        </button>
+                      </>
+                    )}
+                    {status === "Agendado" && (
+                      <button
+                        onClick={() => handleCancelar(item.id)}
+                        className="bg-black text-white rounded-full p-2"
+                        title="Cancelar"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+                    {status === "Cancelado" && (
+                      <span className="text-gray-400 italic"></span>
+                    )}
                   </TableCell>
                 </TableRow>
               );
@@ -133,24 +214,48 @@ export default function TableComponent({ tipo, dados, onEditar }: TableComponent
 
               return (
                 <TableRow key={item.id}>
-                  <TableCell>{formatDate(item.createdAt)}</TableCell>
-                  <TableCell>{item.name}</TableCell>
+                  <TableCell>
+                    {new Date(item.createdAt).toLocaleDateString("pt-BR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    }) +
+                      " às " +
+                      new Date(item.createdAt).toLocaleTimeString("pt-BR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium text-black">{item.name}</div>
+                    <div className="text-sm text-gray-500">
+                      {item.role || "cliente"}
+                    </div>
+                  </TableCell>
                   <TableCell>{enderecoFormatado}</TableCell>
                   <TableCell className="space-x-2">
                     <button
-                      onClick={() => console.log(`Toggle Agendamentos para ID ${item.id}`)}
+                      onClick={() =>
+                        onAtualizarPermissao?.(
+                          item.id,
+                          "Agendamentos",
+                          !temAgendamento
+                        )
+                      }
                       className={`px-3 py-1 rounded-full text-sm ${temAgendamento
-                        ? "bg-black text-white"
-                        : "bg-transparent text-black border border-black"
+                          ? "bg-black text-white"
+                          : "bg-transparent text-black border border-black"
                         }`}
                     >
                       Agendamentos
                     </button>
                     <button
-                      onClick={() => console.log(`Toggle Logs para ID ${item.id}`)}
+                      onClick={() =>
+                        onAtualizarPermissao?.(item.id, "Logs", !temLogs)
+                      }
                       className={`px-3 py-1 rounded-full text-sm ${temLogs
-                        ? "bg-black text-white"
-                        : "bg-transparent text-black border border-black"
+                          ? "bg-black text-white"
+                          : "bg-transparent text-black border border-black"
                         }`}
                     >
                       Logs
@@ -159,16 +264,19 @@ export default function TableComponent({ tipo, dados, onEditar }: TableComponent
                   <TableCell>
                     <Switch
                       checked={item.status}
-                      onChange={() => onEditar(item.id)}
+                      onChange={() => onToggleStatus?.(item.id)}
                       sx={{
                         "& .MuiSwitch-switchBase": {
-                          color: "#fff",
+                          color: "#000", 
+                        },
+                        "& .MuiSwitch-switchBase.Mui-checked": {
+                          color: "#000", 
+                        },
+                        "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                          backgroundColor: "#000", 
                         },
                         "& .MuiSwitch-track": {
-                          backgroundColor: "#000",
-                        },
-                        "& .Mui-checked": {
-                          color: "#fff",
+                          backgroundColor: "#bbb", 
                         },
                       }}
                     />
@@ -192,8 +300,6 @@ export default function TableComponent({ tipo, dados, onEditar }: TableComponent
           })}
         </TableBody>
       </Table>
-
-      {/* Paginação */}
       <TablePagination
         component="div"
         count={dados.length}
